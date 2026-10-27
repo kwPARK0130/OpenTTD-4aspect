@@ -143,6 +143,7 @@ jobs:
           set vehicle.train_braking_model
           set vehicle.four_aspect_signalling
           start_ai FourAspectSmoke
+          script
           '@ | Set-Content -LiteralPath 'smoke/scripts/game_start.scr' -Encoding utf8
           
           @'
