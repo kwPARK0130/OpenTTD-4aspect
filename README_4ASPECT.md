@@ -12,3 +12,5 @@ The feature is off by default outside the provided portable config. New savegame
 
 The Windows workflow builds the complete game, runs CTest, packages its dependencies and OpenGFX, then creates a release.
 A failed build never publishes a playable ZIP. Read CI status before downloading.
+
+Live signal references use the train route direction, including on two-way signals.
