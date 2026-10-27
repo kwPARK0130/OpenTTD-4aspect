@@ -1,3 +1,4 @@
+# Build all targets so regression test savegames are included.
 name: Four-aspect Windows playable build
 on:
   push:
