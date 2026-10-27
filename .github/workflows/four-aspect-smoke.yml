@@ -144,9 +144,11 @@ jobs:
           '@ | Set-Content -LiteralPath 'smoke/scripts/game_start.scr' -Encoding utf8
           
           @'
-          import ctypes, pathlib, re, struct, subprocess
+          import ctypes, pathlib, re, struct, subprocess, time
           root=pathlib.Path("smoke").resolve()
           ctypes.windll.kernel32.SetErrorMode(0x8003)
+          ctypes.windll.kernel32.AllocConsole()
+          print("Package graphics:", [str(p.relative_to(root)) for p in (root/"baseset").rglob("*")])
           data=bytearray((root/"openttd.exe").read_bytes())
           pe=struct.unpack_from("<I",data,0x3c)[0]
           assert data[pe:pe+4]==b"PE"+bytes(2)
@@ -158,11 +160,21 @@ jobs:
           startup.dwFlags|=subprocess.STARTF_USESHOWWINDOW
           startup.wShowWindow=0
           with open("smoke-runtime.log","w",encoding="utf-8") as f:
-           result=subprocess.run([str(console_exe),"-x","-c",str(root/"smoke.cfg"),"-g","-snull","-mnull","-vnull:ticks=10000","-d","script=2","-Q"],
-           cwd=root,stdout=f,stderr=subprocess.STDOUT,timeout=180,startupinfo=startup)
+           process=subprocess.Popen([str(console_exe),"-x","-c",str(root/"smoke.cfg"),"-g","-snull","-mnull","-vnull:until_exit","-d","misc=1,script=2","-Q"],
+           cwd=root,stdout=f,stderr=subprocess.STDOUT,startupinfo=startup)
+           deadline=time.monotonic()+180
+           completed=False
+           while time.monotonic()<deadline and process.poll() is None:
+            time.sleep(0.1)
+            current=pathlib.Path("smoke-runtime.log").read_text(encoding="utf-8",errors="replace")
+            if "4A_SMOKE_COMPLETE" in current:
+             completed=True
+             break
+           if process.poll() is None: process.terminate()
+           process.wait(timeout=10)
           log=pathlib.Path("smoke-runtime.log").read_text(encoding="utf-8",errors="replace")
           print(log)
-          assert result.returncode==0, result.returncode
+          assert completed,"Game exited or timed out before the AI completed"
           assert "4A_SMOKE_COMPLETE" in log,"AI route test did not finish"
           samples=[tuple(map(int,m)) for m in re.findall(r"4A_SPEED sample=(\d+) lead=(\d+) follow=(\d+)",log)]
           assert len(samples)==30,samples
