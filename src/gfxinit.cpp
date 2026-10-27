@@ -210,6 +210,9 @@ static void LoadSpriteTables()
 	/* Tracerestrict sprites. */
 	LoadGrfFile("tracerestrict.grf", SPR_TRACERESTRICT_BASE, false);
 
+	/* Built-in four-aspect signal heads. */
+	LoadGrfFile("four_aspect_lamps.grf", SPR_FOUR_ASPECT_LAMPS_BASE, false);
+
 	/* Misc GUI sprites. */
 	LoadGrfFile("misc_gui.grf", SPR_MISC_GUI_BASE, false);
 

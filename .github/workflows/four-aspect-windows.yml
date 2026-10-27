@@ -29,6 +29,9 @@ jobs:
             cmake:p gcc:p ninja:p lld:p pkgconf:p
             libpng:p xz:p lzo2:p zstd:p
             freetype:p harfbuzz:p icu:p opusfile:p
+      - name: Validate built-in signal sprites
+        shell: pwsh
+        run: python utils/generate_four_aspect_lamps.py --check
       - name: Configure
         run: |
           cmake -S . -B build -G Ninja \
@@ -37,6 +40,11 @@ jobs:
             -DOPTION_NO_LTO=ON
       - name: Compile game and tests
         run: cmake --build build --target openttd openttd_test --parallel 3
+      - name: Install test graphics
+        run: |
+          mkdir -p build/baseset
+          curl --fail --location --retry 3 https://cdn.openttd.org/opengfx-releases/0.6.0/opengfx-0.6.0-all.zip -o opengfx.zip
+          unzip -o opengfx.zip -d build/baseset
       - name: Run tests
         run: ctest --test-dir build --output-on-failure --timeout 120
       - name: Package portable game
@@ -45,7 +53,6 @@ jobs:
           cp prototype/* package/
           ldd build/openttd.exe | awk '/\/ucrt64\/bin\// {print $3}' | sort -u | while read dll; do cp "$dll" package/; done
           mkdir -p package/baseset
-          curl --fail --location --retry 3 https://cdn.openttd.org/opengfx-releases/0.6.0/opengfx-0.6.0-all.zip -o opengfx.zip
           unzip -o opengfx.zip -d package/baseset
       - name: ZIP
         shell: pwsh

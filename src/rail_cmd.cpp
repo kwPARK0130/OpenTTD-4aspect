@@ -3433,17 +3433,16 @@ void DrawSingleSignal(TileIndex tile, const RailTypeInfo *rti, Track track, Sign
 		is_custom_sprite = false;
 	}
 
+	if (context.ctx_mode == CSSC_TRACK && IsFourAspectSignal(tile, track)) {
+		sprite = SPR_FOUR_ASPECT_LAMPS_BASE + std::min<uint8_t>(aspect, 3);
+		pal = PAL_NONE;
+		is_custom_sprite = true;
+	}
+
 	if (!is_custom_sprite && show_restricted && variant == SignalVariant::Electric && _settings_client.gui.show_restricted_signal_recolour) {
 		DrawRestrictedSignal(type, sprite, x, y, z, BB_HEIGHT_UNDER_BRIDGE, 0);
 	} else {
 		AddSortableSpriteToDraw(sprite, pal, x, y, z, {{}, {1, 1, BB_HEIGHT_UNDER_BRIDGE}, {}});
-	}
-	/* Prototype command lamps, using base-set sprites; no NewGRF required.
-	 * The original head retains its reservation indication underneath. */
-	if (context.ctx_mode == CSSC_TRACK && IsFourAspectSignal(tile, track)) {
-		const PaletteID lamp_pal = aspect == 0 ? PALETTE_TO_RED : (aspect == 1 ? PALETTE_TO_YELLOW : PALETTE_TO_GREEN);
-		AddSortableSpriteToDraw(SPR_DOT, lamp_pal, x, y, z + 12, {{}, {1, 1, 1}, {}});
-		if (aspect == 2) AddSortableSpriteToDraw(SPR_DOT, PALETTE_TO_YELLOW, x, y, z + 17, {{}, {1, 1, 1}, {}});
 	}
 	const Sprite *sp = GetSprite(sprite, SpriteType::Normal, {});
 	if (sp->x_offs < -SIGNAL_DIRTY_LEFT || sp->x_offs + sp->width > SIGNAL_DIRTY_RIGHT || sp->y_offs < -SIGNAL_DIRTY_TOP || sp->y_offs + sp->height > SIGNAL_DIRTY_BOTTOM) {

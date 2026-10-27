@@ -24,6 +24,7 @@ set(BASESET_OTHER_SOURCE_FILES
         ${CMAKE_CURRENT_SOURCE_DIR}/innerhighlight.grf
         ${CMAKE_CURRENT_SOURCE_DIR}/progsignals.grf
         ${CMAKE_CURRENT_SOURCE_DIR}/extra_signals.grf
+        ${CMAKE_CURRENT_SOURCE_DIR}/four_aspect_lamps.grf
         ${CMAKE_CURRENT_SOURCE_DIR}/route_step.grf
         ${CMAKE_CURRENT_SOURCE_DIR}/tracerestrict.grf
         ${CMAKE_CURRENT_SOURCE_DIR}/misc_gui.grf

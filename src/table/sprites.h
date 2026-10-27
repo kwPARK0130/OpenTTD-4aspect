@@ -382,8 +382,12 @@ static const uint16_t DUP_ORIGINAL_SIGNALS_SPRITE_COUNT = 16;
 static const SpriteID SPR_DUP_SIGNALS_BASE = SPR_DUP_ORIGINAL_SIGNALS_BASE + DUP_ORIGINAL_SIGNALS_SPRITE_COUNT;
 static const uint16_t DUP_SIGNALS_SPRITE_COUNT = PRESIGNAL_SEMAPHORE_AND_PBS_SPRITE_COUNT;
 
+/* Built-in four-aspect signal heads: R, Y, YG, G. */
+static const SpriteID SPR_FOUR_ASPECT_LAMPS_BASE = SPR_DUP_SIGNALS_BASE + DUP_SIGNALS_SPRITE_COUNT;
+static const uint16_t FOUR_ASPECT_LAMPS_SPRITE_COUNT = 4;
+
 /* From where can we start putting NewGRFs? */
-static const SpriteID SPR_NEWGRFS_BASE = SPR_DUP_SIGNALS_BASE + DUP_SIGNALS_SPRITE_COUNT;
+static const SpriteID SPR_NEWGRFS_BASE = SPR_FOUR_ASPECT_LAMPS_BASE + FOUR_ASPECT_LAMPS_SPRITE_COUNT;
 
 /* Manager face sprites */
 static const SpriteID SPR_GRADIENT = 874; // background gradient behind manager face
