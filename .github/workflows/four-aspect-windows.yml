@@ -39,7 +39,7 @@ jobs:
             -DCMAKE_CXX_FLAGS="-fuse-ld=lld" \
             -DOPTION_NO_LTO=ON
       - name: Compile game and tests
-        run: cmake --build build --target openttd openttd_test --parallel 3
+        run: cmake --build build --target all openttd_test --parallel 4
       - name: Install test graphics
         run: |
           mkdir -p build/baseset
