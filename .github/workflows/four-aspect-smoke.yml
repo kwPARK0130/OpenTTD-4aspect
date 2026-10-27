@@ -23,6 +23,11 @@ jobs:
            if (!(Test-Path -LiteralPath "smoke/$file")) { throw "Missing package file: $file" }
           }
           New-Item -ItemType Directory -Force smoke/ai/FourAspectSmoke,smoke/scripts | Out-Null
+          1..7 | ForEach-Object {
+            $next = $_ + 1
+            "schedule on-next-calendar-month scripts/smoke-exit-$next.scr" | Set-Content -LiteralPath "smoke/scripts/smoke-exit-$_.scr" -Encoding utf8
+          }
+          'exit' | Set-Content -LiteralPath 'smoke/scripts/smoke-exit-8.scr' -Encoding utf8
           @'
           class FourAspectSmokeInfo extends AIInfo {
            function GetAuthor() { return "OpenTTD 4-aspect test"; }
@@ -143,6 +148,7 @@ jobs:
           set vehicle.train_braking_model
           set vehicle.four_aspect_signalling
           start_ai FourAspectSmoke
+          schedule on-next-calendar-month scripts/smoke-exit-1.scr
           script
           '@ | Set-Content -LiteralPath 'smoke/scripts/game_start.scr' -Encoding utf8
           
@@ -171,7 +177,6 @@ jobs:
             deadline=time.monotonic()+20
             while time.monotonic()<deadline and process.poll() is None:
              time.sleep(0.1)
-             if "4A_SMOKE_COMPLETE" in logfile.read_text(encoding="utf-8",errors="replace"): break
             if process.poll() is None: process.terminate()
             process.wait(timeout=10)
            log=logfile.read_text(encoding="utf-8",errors="replace")
@@ -184,6 +189,12 @@ jobs:
           on_log=run_case(True)
           pathlib.Path("smoke-runtime.log").write_text(on_log,encoding="utf-8")
           assert "4A_SMOKE_COMPLETE" in on_log,"Enabled route smoke did not complete"
+          samples=[tuple(map(int,m)) for m in re.findall(r"4A_SPEED sample=(\d+) lead=(\d+) follow=(\d+)",on_log)]
+          assert len(samples)==30,samples
+          assert any(f>0 for i,l,f in samples),"Follower never moved"
+          assert any(f==0 for i,l,f in samples if 9<=i<=20),"Follower did not stop"
+          assert any(f>0 for i,l,f in samples if i>=22),"Follower did not resume"
+          print("PACKAGED_BINARY_SMOKE_PASSED")
           '@ | Set-Content -LiteralPath 'run_smoke.py' -Encoding utf8
           
           python run_smoke.py
