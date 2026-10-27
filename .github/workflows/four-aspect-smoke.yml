@@ -1,0 +1,174 @@
+name: Verify released four-aspect Windows ZIP
+on:
+  push:
+    branches: [four-aspect-smoke]
+    paths: [.github/workflows/four-aspect-smoke.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  smoke:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - name: Verify package and run two-train headless test
+        shell: pwsh
+        timeout-minutes: 5
+        run: |
+          Invoke-WebRequest 'https://github.com/kwPARK0130/OpenTTD-4aspect/releases/download/four-aspect-v1-5/openttd-four-aspect-windows-x64.zip' -OutFile game.zip
+          $actualHash=(Get-FileHash game.zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($actualHash -ne '6e5b5c442ae6e71efea117d8ad6dab3fec1b0794916c1a250aeee1277e67ae08') { throw 'Release ZIP digest mismatch' }
+          Expand-Archive game.zip smoke
+          foreach ($file in @('openttd.exe','PLAY-4ASPECT.cmd','four-aspect.cfg','baseset/four_aspect_lamps.grf','lang/korean.lng')) {
+           if (!(Test-Path -LiteralPath "smoke/$file")) { throw "Missing package file: $file" }
+          }
+          New-Item -ItemType Directory -Force smoke/ai/FourAspectSmoke,smoke/scripts | Out-Null
+          @'
+          class FourAspectSmokeInfo extends AIInfo {
+           function GetAuthor() { return "OpenTTD 4-aspect test"; }
+           function GetName() { return "FourAspectSmoke"; }
+           function GetShortName() { return "FA4T"; }
+           function GetDescription() { return "Two-train packaged-binary smoke test."; }
+           function GetVersion() { return 1; }
+           function GetAPIVersion() { return "16"; }
+           function GetDate() { return "2026-10-27"; }
+           function CreateInstance() { return "FourAspectSmoke"; }
+           function UseAsRandomAI() { return false; }
+          }
+          RegisterAI(FourAspectSmokeInfo());
+          '@ | Set-Content -LiteralPath 'smoke/ai/FourAspectSmoke/info.nut' -Encoding utf8
+          
+          @'
+          class FourAspectSmoke extends AIController {
+           function T(x,y) { return AIMap.GetTileIndex(x,y); }
+           function Need(ok, message) { if (!ok) throw message + ": " + AIError.GetLastErrorString(); }
+           function Start() {
+            AIController.SetCommandDelay(1);
+            AICompany.SetName("Four Aspect Smoke");
+            AICompany.SetLoanAmount(AICompany.GetMaxLoanAmount());
+            local engine=-1, best_speed=0;
+            foreach(id,value in AIEngineList(AIVehicle.VT_RAIL)) {
+             if(AIEngine.GetPower(id)>0 && AIEngine.GetCapacity(id)>0 && AIEngine.IsBuildable(id) && AIEngine.GetRailType(id)<2 && AIEngine.GetMaxSpeed(id)>best_speed) {
+              engine=id; best_speed=AIEngine.GetMaxSpeed(id);
+             }
+            }
+            if(engine<0) throw "No self-contained train available.";
+            AIRail.SetCurrentRailType(AIEngine.GetRailType(engine));
+            local x=0,y=0,w=32,h=12,found=false;
+            for(local by=10;by<AIMap.GetMapSizeY()-h-10 && !found;by+=5) {
+             for(local bx=10;bx<AIMap.GetMapSizeX()-w-10 && !found;bx+=5) {
+              local ok=true,ht=AITile.GetMinHeight(T(bx,by));
+              for(local ry=by-1;ry<=by+h && ok;ry++) for(local rx=bx;rx<=bx+w && ok;rx++) {
+               if(rx!=bx && rx!=bx+w && ry!=by && ry!=by+h && !(rx==bx+4 && ry==by-1)) continue;
+               local t=T(rx,ry);
+               if(!AITile.IsBuildable(t) || AITile.GetSlope(t)!=0 || AITile.GetMinHeight(t)!=ht || ht==0) ok=false;
+              }
+              if(ok) { x=bx; y=by; found=true; }
+             }
+            }
+            if(!found) throw "No flat clear loop location in test map.";
+            local route=[];
+            for(local a=x;a<x+w;a++) route.append(T(a,y));
+            for(local b=y;b<y+h;b++) route.append(T(x+w,b));
+            for(local a=x+w;a>x;a--) route.append(T(a,y+h));
+            for(local b=y+h;b>y;b--) route.append(T(x,b));
+            local n=route.len();
+            for(local i=0;i<n;i++) {
+             local prev=route[(i+n-1)%n],cur=route[i],next=route[(i+1)%n];
+             AITile.DemolishTile(cur); Need(AIRail.BuildRail(prev,cur,next),"Rail "+i);
+            }
+            local wa=T(x+10,y),wb=T(x+25,y+h);
+            Need(AIRail.BuildRailWaypoint(wa),"Waypoint A");
+            Need(AIRail.BuildRailWaypoint(wb),"Waypoint B");
+            for(local i=3;i<n;i+=6) {
+             local cur=route[i];
+             if(AIRail.IsRailWaypointTile(cur)) continue;
+             Need(AIRail.BuildSignal(cur,route[(i+n-1)%n],AIRail.SIGNALTYPE_NORMAL),"Signal "+i);
+            }
+            local depot=T(x+4,y-1),front=T(x+4,y);
+            AITile.DemolishTile(depot);
+            Need(AIRail.BuildRailDepot(depot,front),"Depot");
+            Need(AIRail.BuildRail(depot,front,T(x+5,y)),"Depot connection");
+            local lead=AIVehicle.BuildVehicle(depot,engine);
+            Need(AIVehicle.IsValidVehicle(lead),"Lead vehicle");
+            Need(AIOrder.AppendOrder(lead,wa,AIOrder.OF_NONE),"Order A");
+            Need(AIOrder.AppendOrder(lead,wb,AIOrder.OF_NONE),"Order B");
+            local follow=AIVehicle.CloneVehicle(depot,lead,true);
+            Need(AIVehicle.IsValidVehicle(follow),"Following vehicle");
+            Need(AIVehicle.StartStopVehicle(lead),"Start lead");
+            AIController.Sleep(150);
+            Need(AIVehicle.StartStopVehicle(follow),"Start follower");
+            AILog.Info("4A_SMOKE_RUNNING");
+            for(local i=0;i<30;i++) {
+             AIController.Sleep(50);
+             AILog.Info("4A_SPEED sample="+i+" lead="+AIVehicle.GetCurrentSpeed(lead)+" follow="+AIVehicle.GetCurrentSpeed(follow));
+             if(i==8) { Need(AIVehicle.StartStopVehicle(lead),"Stop lead"); AILog.Info("4A_LEADER_STOPPED"); }
+             if(i==20) { Need(AIVehicle.StartStopVehicle(lead),"Release lead"); AILog.Info("4A_LEADER_RELEASED"); }
+            }
+            AILog.Info("4A_SMOKE_COMPLETE");
+            while(true) AIController.Sleep(100);
+           }
+          }
+          '@ | Set-Content -LiteralPath 'smoke/ai/FourAspectSmoke/main.nut' -Encoding utf8
+          
+          @'
+          [vehicle]
+          train_braking_model = 1
+          train_acceleration_model = 1
+          four_aspect_signalling = true
+          realistic_braking_aspect_limited = 1
+          train_speed_adaptation = false
+          [pf]
+          forbid_90_deg = false
+          [game_creation]
+          starting_year = 2000
+          map_x = 8
+          map_y = 8
+          land_generator = 1
+          generation_seed = 123456789
+          [difficulty]
+          terrain_type = 0
+          quantity_sea_lakes = 0
+          number_towns = 0
+          vehicle_breakdowns = 0
+          [gui]
+          autosave = off
+          autosave_on_exit = false
+          '@ | Set-Content -LiteralPath 'smoke/smoke.cfg' -Encoding utf8
+          
+          @'
+          echo "4A_SMOKE_BOOT"
+          set vehicle.train_braking_model
+          set vehicle.four_aspect_signalling
+          start_ai FourAspectSmoke
+          '@ | Set-Content -LiteralPath 'smoke/scripts/game_start.scr' -Encoding utf8
+          
+          @'
+          import ctypes, pathlib, re, subprocess
+          root=pathlib.Path("smoke").resolve()
+          ctypes.windll.kernel32.SetErrorMode(0x8003)
+          with open("smoke-runtime.log","w",encoding="utf-8") as f:
+           result=subprocess.run([str(root/"openttd.exe"),"-x","-c",str(root/"smoke.cfg"),"-g","-snull","-mnull","-vnull:ticks=10000","-d","script=2","-Q"],
+           cwd=root,stdout=f,stderr=subprocess.STDOUT,timeout=180,creationflags=subprocess.CREATE_NO_WINDOW)
+          log=pathlib.Path("smoke-runtime.log").read_text(encoding="utf-8",errors="replace")
+          print(log)
+          assert result.returncode==0, result.returncode
+          assert "4A_SMOKE_COMPLETE" in log,"AI route test did not finish"
+          samples=[tuple(map(int,m)) for m in re.findall(r"4A_SPEED sample=(\d+) lead=(\d+) follow=(\d+)",log)]
+          assert len(samples)==30,samples
+          assert any(f>0 for i,l,f in samples),"Follower never moved"
+          assert any(f==0 for i,l,f in samples if 9<=i<=20),"Follower did not stop behind stopped leader"
+          assert any(f>0 for i,l,f in samples if i>=22),"Follower did not resume"
+          print("PACKAGED_BINARY_SMOKE_PASSED")
+          '@ | Set-Content -LiteralPath 'run_smoke.py' -Encoding utf8
+          
+          python run_smoke.py
+          if ($LASTEXITCODE -ne 0) { throw 'Packaged game smoke test failed' }
+          
+      - name: Keep runtime evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: four-aspect-packaged-binary-runtime-log
+          path: smoke-runtime.log
+          if-no-files-found: warn
