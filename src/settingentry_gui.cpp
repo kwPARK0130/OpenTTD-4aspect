@@ -972,6 +972,7 @@ SettingsContainer &GetSettingsTree()
 			{
 				physics->Add(new SettingEntry("vehicle.train_acceleration_model"));
 				physics->Add(new SettingEntry("vehicle.train_braking_model"));
+				physics->Add(new ConditionallyHiddenSettingEntry("vehicle.four_aspect_signalling", []() -> bool { return GetGameSettings().vehicle.train_braking_model != TBM_REALISTIC; }));
 				physics->Add(new ConditionallyHiddenSettingEntry("vehicle.realistic_braking_aspect_limited", []() -> bool { return GetGameSettings().vehicle.train_braking_model != TBM_REALISTIC; }));
 				physics->Add(new ConditionallyHiddenSettingEntry("vehicle.limit_train_acceleration", []() -> bool { return GetGameSettings().vehicle.train_braking_model != TBM_REALISTIC; }));
 				physics->Add(new ConditionallyHiddenSettingEntry("vehicle.train_acc_braking_percent", []() -> bool { return GetGameSettings().vehicle.train_braking_model != TBM_REALISTIC; }));

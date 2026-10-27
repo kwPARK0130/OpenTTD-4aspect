@@ -410,6 +410,14 @@ static uint16_t GetTrainSpeedLimitForRailtype(const Train *consist, RailType rt,
 static void AddSignalToLookAhead(TrainReservationLookAhead *lookahead, uint16_t signal_speed, uint16_t signal_flags, TileIndex signal_tile, uint16_t signal_track, int offset, int16_t z_pos)
 {
 	lookahead->AddSignal(signal_speed, offset, z_pos, signal_flags);
+	/* Live references prevent stale signal commands. Synthetic bridge/tunnel
+	 * signals remain under the original JGR reservation/braking controller. */
+	if (signal_track < TRACK_END && IsFourAspectSignal(signal_tile, static_cast<Track>(signal_track))) {
+		Trackdir td = TrackToTrackdir(static_cast<Track>(signal_track));
+		if (!HasSignalOnTrackdir(signal_tile, td)) td = ReverseTrackdir(td);
+		const int position = lookahead->RealEndPosition() + offset;
+		lookahead->items.push_back({ position, position, z_pos, signal_tile.base(), static_cast<uint16_t>(td), TRLIT_FOUR_ASPECT_SIGNAL });
+	}
 	if (_settings_game.vehicle.train_speed_adaptation) {
 		lookahead->AddSpeedAdaptation(signal_tile, signal_track, offset, z_pos);
 	}

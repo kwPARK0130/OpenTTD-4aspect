@@ -176,6 +176,7 @@ struct Train final : public GroundVehicle<Train, VehicleType::Train> {
 	// 1 byte gap
 	uint16_t speed_restriction = 0;
 	uint16_t signal_speed_restriction = 0;
+	uint16_t four_aspect_speed_limit = UINT16_MAX; ///< Last accepted aspect command
 	uint16_t crash_anim_pos = 0; ///< Crash animation counter, also used for realistic braking train brake overheating
 
 	/** Create new Train object. @copydoc GroundVehicle::GroundVehicle */

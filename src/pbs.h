@@ -53,6 +53,7 @@ enum TrainReservationLookAheadItemType : uint8_t {
 	TRLIT_SIGNAL                 = 4,     ///< Signal
 	TRLIT_CURVE_SPEED            = 5,     ///< Curve speed limit
 	TRLIT_SPEED_ADAPTATION       = 6,     ///< Train speed adaptation ahead
+	TRLIT_FOUR_ASPECT_SIGNAL     = 7,     ///< Live signal: data_id=tile, data_aux=trackdir
 };
 
 enum TrainReservationSignalLookAheadItemFlags {

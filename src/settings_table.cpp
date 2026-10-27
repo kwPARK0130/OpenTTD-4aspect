@@ -499,6 +499,28 @@ static void TrainAccelerationModelChanged(int32_t new_value)
 	SetWindowClassesDirty(WindowClass::TemplateReplacementCreateTemplate);
 }
 
+static bool CheckFourAspectSignallingChange([[maybe_unused]] int32_t &new_value)
+{
+	if (_game_mode != GameMode::Menu) {
+		for (const Train *t : Train::IterateFrontOnly()) {
+			if (t->cur_speed != 0) {
+				ShowErrorMessage(GetEncodedString(STR_CONFIG_SETTING_FOUR_ASPECT_STOP_TRAINS), {}, WarningLevel::Error);
+				return false;
+			}
+		}
+	}
+	return true;
+}
+
+static void FourAspectSignallingChanged([[maybe_unused]] int32_t new_value)
+{
+	for (Train *t : Train::IterateFrontOnly()) {
+		t->four_aspect_speed_limit = UINT16_MAX;
+		t->lookahead.reset();
+	}
+	TrainBrakingModelChanged(_settings_game.vehicle.train_braking_model);
+}
+
 static bool CheckTrainBrakingModelChange(int32_t &new_value)
 {
 	if (new_value == TBM_REALISTIC && (_game_mode == GameMode::Normal || _game_mode == GameMode::Editor)) {

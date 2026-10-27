@@ -208,6 +208,8 @@ enum SlXvFeatureIndex {
 	XSLFI_JOKERPP,                                ///< This is a JokerPP game, use this for loading some settings
 	XSLFI_CHILLPP,                                ///< This is a ChillPP game, use this for loading some settings
 
+	XSLFI_FOUR_ASPECT_SIGNALLING,                  ///< Experimental four-aspect speed commands
+
 	XSLFI_SIZE,                                   ///< Total count of features, including null feature
 };
 

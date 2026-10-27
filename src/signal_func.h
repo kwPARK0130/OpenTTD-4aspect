@@ -185,6 +185,7 @@ void UpdateAspectDeferredWithVehicleTunnelBridgeExit(const Train *v, TileIndex t
 void UpdateLookaheadCombinedNormalShuntSignalDeferred(TileIndex tile, Trackdir trackdir, int lookahead_position);
 void FlushDeferredAspectUpdates();
 void FlushDeferredDetermineCombineNormalShuntMode(Train *v);
+bool IsFourAspectSignal(TileIndex tile, Track track);
 void UpdateAllSignalAspects();
 void UpdateExtraAspectsVariable(bool update_always_reserve_through = false);
 void InitialiseExtraAspectsVariable();

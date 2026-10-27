@@ -2550,3 +2550,7 @@ STR_CONFIG_SETTING_NEWS_CARGO_FLOW                              :역에서 화�
 STR_CONFIG_SETTING_NEWS_CARGO_FLOW_HELPTEXT                     :화물이 쌓이고 있는 역에 대해 경고합니다.{}화물이 쌓여있는지 여부는 특정 수치가 아닌 화물 기록 그래프의 형태를 기반으로 판단합니다.
 
 STR_STATION_CARGO_OVERFLOW                                      :{WHITE}{1:STATION}에 {0:CARGO_LIST} 화물이 너무 많이 쌓여있습니다
+
+STR_CONFIG_SETTING_FOUR_ASPECT_SIGNALLING                      :시험용 4현시 신호 속도 제어: {STRING2}
+STR_CONFIG_SETTING_FOUR_ASPECT_SIGNALLING_HELPTEXT              :현실적 열차 제동이 필요합니다. 기본 전기식 본선 신호에 적색 정지, 황색 45km/h, 황록색 65km/h, 녹색 선로 허용속도를 적용합니다. 통과한 신호의 명령은 다음 신호까지 유지됩니다. 기존 진로 예약과 제동 보호는 유지됩니다. 변경 전 모든 열차를 정지하십시오.
+STR_CONFIG_SETTING_FOUR_ASPECT_STOP_TRAINS                      :{WHITE}4현시 신호 설정을 변경하기 전에 모든 열차를 정지하십시오.

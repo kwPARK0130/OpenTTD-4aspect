@@ -75,6 +75,7 @@ static void loadSTC(const SlxiSubChunkInfo &info, uint32_t length);
 static uint32_t saveSTC(const SlxiSubChunkInfo &info, bool dry_run);
 
 const std::initializer_list<SlxiSubChunkInfo> _sl_xv_sub_chunk_infos = {
+	{ XSLFI_FOUR_ASPECT_SIGNALLING,           XSCF_NULL,                1,   1, "four_aspect_signalling",            nullptr, nullptr, nullptr          },
 	{ XSLFI_VERSION_LABEL,                    XSCF_IGNORABLE_ALL,       1,   1, "version_label",                    saveVL,  loadVL,  nullptr          },
 	{ XSLFI_UPSTREAM_VERSION,                 XSCF_NULL,                2,   2, "upstream_version",                 saveUV,  loadUV,  nullptr          },
 	{ XSLFI_TRACE_RESTRICT,                   XSCF_NULL,               24,  24, "tracerestrict",                    nullptr, nullptr, "TRRM,TRRP,TRRS,TRRG,TRRB" },

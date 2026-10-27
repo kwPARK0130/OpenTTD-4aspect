@@ -833,6 +833,7 @@ struct VehicleSettings {
 	uint8_t                smoke_amount;                          ///< amount of smoke/sparks locomotives produce
 	AccelerationModel      train_acceleration_model;              ///< realistic acceleration for trains
 	uint8_t                train_braking_model;                   ///< braking model for trains
+	bool                   four_aspect_signalling = false;        ///< Experimental R/Y/YG/G speed commands
 	uint8_t                realistic_braking_aspect_limited;      ///< realistic braking lookahead is aspect limited
 	bool                   limit_train_acceleration;              ///< when using realistic braking, also limit train acceleration
 	uint8_t                train_acc_braking_percent;             ///< adjustment factor for acceleration and braking of trains

@@ -1952,6 +1952,16 @@ static void DetermineSignalStyleMapping(std::array<NewSignalStyleMapping, MAX_NE
 	}
 }
 
+/** Default-style electric main signals participate in this first version. */
+bool IsFourAspectSignal(TileIndex tile, Track track)
+{
+	if (!_settings_game.vehicle.four_aspect_signalling || _settings_game.vehicle.train_braking_model != TBM_REALISTIC) return false;
+	if (!IsTileType(tile, TileType::Railway) || !HasSignalOnTrack(tile, track)) return false;
+	if (GetSignalVariant(tile, track) != SignalVariant::Electric || GetSignalStyle(tile, track) != 0) return false;
+	const SignalType type = GetSignalType(tile, track);
+	return type == SignalType::Block || type == SignalType::Path || type == SignalType::PathOneWay;
+}
+
 static bool DetermineExtraAspectsVariable()
 {
 	bool changed = false;
@@ -2020,6 +2030,11 @@ static bool DetermineExtraAspectsVariable()
 	}
 	for (uint i = _num_new_signal_styles; i < MAX_NEW_SIGNAL_STYLES; i++) {
 		_new_signal_styles[i].lookahead_extra_aspects = new_extra_aspects;
+	}
+
+	if (_settings_game.vehicle.four_aspect_signalling && _settings_game.vehicle.train_braking_model == TBM_REALISTIC) {
+		new_extra_aspects = std::max<uint8_t>(new_extra_aspects, 2);
+		default_style_aspects = 2;
 	}
 
 	_extra_aspects = new_extra_aspects;

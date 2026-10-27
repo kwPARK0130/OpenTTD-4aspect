@@ -1,0 +1,69 @@
+name: Four-aspect Windows playable build
+on:
+  push:
+    branches: [four-aspect-v1]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: four-aspect-windows
+  cancel-in-progress: true
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Set up Windows compiler
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: git
+          pacboy: >-
+            cmake:p gcc:p ninja:p lld:p pkgconf:p
+            libpng:p xz:p lzo2:p zstd:p
+            freetype:p harfbuzz:p icu:p opusfile:p
+      - name: Configure
+        run: |
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_CXX_FLAGS="-fuse-ld=lld" \
+            -DOPTION_NO_LTO=ON
+      - name: Compile game and tests
+        run: cmake --build build --target openttd openttd_test --parallel 3
+      - name: Run tests
+        run: ctest --test-dir build --output-on-failure --timeout 120
+      - name: Package portable game
+        run: |
+          cmake --install build --prefix "$PWD/package"
+          cp prototype/* package/
+          ldd build/openttd.exe | awk '/\/ucrt64\/bin\// {print $3}' | sort -u | while read dll; do cp "$dll" package/; done
+          mkdir -p package/baseset
+          curl --fail --location --retry 3 https://cdn.openttd.org/opengfx-releases/0.6.0/opengfx-0.6.0-all.zip -o opengfx.zip
+          unzip -o opengfx.zip -d package/baseset
+      - name: ZIP
+        shell: pwsh
+        run: Compress-Archive -Path package/* -DestinationPath openttd-four-aspect-windows-x64.zip
+      - name: Upload playable build
+        uses: actions/upload-artifact@v7
+        with:
+          name: openttd-four-aspect-windows-x64
+          path: openttd-four-aspect-windows-x64.zip
+          retention-days: 30
+      - name: Publish tested build
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "four-aspect-v1-${{ github.run_number }}" \
+            openttd-four-aspect-windows-x64.zip \
+            --target "${{ github.sha }}" \
+            --title "Four-aspect v1 build ${{ github.run_number }}" \
+            --prerelease \
+            --notes "Experimental R/Y/YG/G speed commands on JGRPP 0.73.4. Extract into a new folder and run PLAY-4ASPECT.cmd. Native path reservations remain. Read README_4ASPECT_KO.md before loading savegames."

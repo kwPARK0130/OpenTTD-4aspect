@@ -45,6 +45,7 @@
 #include "debug_settings.h"
 #include "train_settings.h"
 #include "train_speed_adaptation.h"
+#include "four_aspect.h"
 #include "event_logs.h"
 #include "misc_cmd.h"
 #include "tile_cmd.h"
@@ -1058,6 +1059,22 @@ static void ApplyLookAheadItem(const Train *v, const TrainReservationLookAheadIt
 			if (_settings_game.vehicle.train_acceleration_model != AccelerationModel::Original) limit_speed(item.start, item.data_id, item.z_pos);
 			break;
 
+		case TRLIT_FOUR_ASPECT_SIGNAL: {
+			if (!_settings_game.vehicle.four_aspect_signalling || item.start <= current_position) break;
+			const TileIndex tile{item.data_id};
+			const Trackdir td = static_cast<Trackdir>(item.data_aux);
+			uint8_t aspect = 0;
+			/* Removed/changed signals fail closed until lookahead is rebuilt. */
+			if (IsValidTile(tile) && IsFourAspectSignal(tile, TrackdirToTrack(td)) && HasSignalOnTrackdir(tile, td)) {
+				aspect = GetSignalAspectGeneric(tile, td, false);
+			}
+			const uint16_t target = FourAspectSpeedLimit(aspect);
+			if (target != UINT16_MAX) {
+				limit_speed(item.start - (aspect == 0 ? 1 : 0), target, item.z_pos);
+			}
+			break;
+		}
+
 		case TRLIT_SPEED_ADAPTATION:
 			break;
 	}
@@ -1203,6 +1220,10 @@ Train::MaxSpeedInfo Train::GetCurrentMaxSpeedInfoInternal(bool update_state) con
 	}
 
 	if (this->UsingRealisticBraking()) {
+		if (_settings_game.vehicle.four_aspect_signalling) {
+			max_speed = std::min<int>(max_speed, this->four_aspect_speed_limit);
+			advisory_max_speed = std::min(advisory_max_speed, max_speed);
+		}
 		if (this->lookahead != nullptr) {
 			if (update_state && this->lookahead->zpos_refresh_remaining == 0) {
 				this->lookahead->cached_zpos = this->CalculateOverallZPos();
@@ -1587,6 +1608,7 @@ static CommandCost CmdBuildRailWagon(TileIndex tile, DoCommandFlags flags, const
 		v->reverse_distance = 0;
 		v->speed_restriction = 0;
 		v->signal_speed_restriction = 0;
+		v->four_aspect_speed_limit = UINT16_MAX;
 
 		v->SetWagon();
 
@@ -1758,6 +1780,7 @@ CommandCost CmdBuildRailVehicle(TileIndex tile, DoCommandFlags flags, const Engi
 		v->reverse_distance = 0;
 		v->speed_restriction = 0;
 		v->signal_speed_restriction = 0;
+		v->four_aspect_speed_limit = UINT16_MAX;
 
 		v->engine_type = e->index;
 		v->gcache.first_engine = EngineID::Invalid(); // needs to be set before first callback
@@ -2504,6 +2527,7 @@ CommandCost CmdSellRailWagon(DoCommandFlags flags, Vehicle *t, bool sell_chain, 
 				/* Copy other important data from the front engine */
 				new_head->CopyVehicleConfigAndStatistics(first);
 				new_head->speed_restriction = first->speed_restriction;
+				new_head->four_aspect_speed_limit = first->four_aspect_speed_limit;
 				Train::From(new_head)->flags.Set(VehicleRailFlag::SpeedAdaptationExempt, Train::From(first)->flags.Test(VehicleRailFlag::SpeedAdaptationExempt));
 			}
 			GroupStatistics::CountVehicle(new_head, 1); // after copying over the profit, if required
@@ -3041,6 +3065,7 @@ static bool IsWholeTrainInsideDepot(const Train *v)
  */
 static void ReverseTrainDirection(Train *consist)
 {
+	consist->four_aspect_speed_limit = UINT16_MAX;
 	Train *moving_front = consist->GetMovingFront();
 	if (IsRailDepotTile(moving_front->tile)) {
 		if (IsWholeTrainInsideDepot(consist)) return;
@@ -6040,6 +6065,14 @@ bool TrainController(Train *v, Vehicle *nomove, bool reverse)
 				if (!vets.Test(VehicleEnterTileState::EnteredWormhole)) {
 					Track track = FindFirstTrack(chosen_track);
 					Trackdir tdir = TrackDirectionToTrackdir(track, chosen_dir);
+					if (v->IsMovingFront() && IsTileType(gp.new_tile, TileType::Railway) && HasSignalOnTrackdir(gp.new_tile, tdir)) {
+						/* Latch before our entry turns this signal red. */
+						if (IsFourAspectSignal(gp.new_tile, track)) {
+							AcceptFourAspectCommand(first->four_aspect_speed_limit, GetSignalAspectGeneric(gp.new_tile, tdir, false));
+						} else {
+							first->four_aspect_speed_limit = UINT16_MAX;
+						}
+					}
 					if (v->IsMovingFront() && HasPbsSignalOnTrackdir(gp.new_tile, tdir)) {
 						SetSignalStateByTrackdir(gp.new_tile, tdir, SignalState::Red);
 						MarkSingleSignalDirty(gp.new_tile, tdir);

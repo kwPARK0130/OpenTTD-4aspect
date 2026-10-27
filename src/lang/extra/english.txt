@@ -2617,3 +2617,7 @@ STR_CONFIG_SETTING_NEWS_CARGO_FLOW                              :Overflowing car
 STR_CONFIG_SETTING_NEWS_CARGO_FLOW_HELPTEXT                     :Warn about stations where cargo is accumulating.{}The detection is based on shape of the cargo history graph, not on specific amount threshold.
 
 STR_STATION_CARGO_OVERFLOW                                      :{WHITE}{CARGO_LIST} overflowing at {STATION}
+
+STR_CONFIG_SETTING_FOUR_ASPECT_SIGNALLING                      :Experimental four-aspect speed commands: {STRING2}
+STR_CONFIG_SETTING_FOUR_ASPECT_SIGNALLING_HELPTEXT              :Requires realistic train braking. Default electric main signals command R: stop, Y: 45 km/h, YG: 65 km/h, G: line speed. The last passed command remains active until the next signal. Existing path reservations and braking protection remain in use. Stop all trains before changing this setting.
+STR_CONFIG_SETTING_FOUR_ASPECT_STOP_TRAINS                      :{WHITE}Stop all trains before changing four-aspect signalling.
