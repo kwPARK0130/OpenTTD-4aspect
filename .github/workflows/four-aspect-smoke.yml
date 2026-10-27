@@ -144,12 +144,22 @@ jobs:
           '@ | Set-Content -LiteralPath 'smoke/scripts/game_start.scr' -Encoding utf8
           
           @'
-          import ctypes, pathlib, re, subprocess
+          import ctypes, pathlib, re, struct, subprocess
           root=pathlib.Path("smoke").resolve()
           ctypes.windll.kernel32.SetErrorMode(0x8003)
+          data=bytearray((root/"openttd.exe").read_bytes())
+          pe=struct.unpack_from("<I",data,0x3c)[0]
+          assert data[pe:pe+4]==b"PE"+bytes(2)
+          # Like upstream Regression.cmake/editbin: only the test copy uses a console.
+          struct.pack_into("<H",data,pe+24+68,3)
+          console_exe=root/"openttd-smoke-console.exe"
+          console_exe.write_bytes(data)
+          startup=subprocess.STARTUPINFO()
+          startup.dwFlags|=subprocess.STARTF_USESHOWWINDOW
+          startup.wShowWindow=0
           with open("smoke-runtime.log","w",encoding="utf-8") as f:
-           result=subprocess.run([str(root/"openttd.exe"),"-x","-c",str(root/"smoke.cfg"),"-g","-snull","-mnull","-vnull:ticks=10000","-d","script=2","-Q"],
-           cwd=root,stdout=f,stderr=subprocess.STDOUT,timeout=180,creationflags=subprocess.CREATE_NO_WINDOW)
+           result=subprocess.run([str(console_exe),"-x","-c",str(root/"smoke.cfg"),"-g","-snull","-mnull","-vnull:ticks=10000","-d","script=2","-Q"],
+           cwd=root,stdout=f,stderr=subprocess.STDOUT,timeout=180,startupinfo=startup)
           log=pathlib.Path("smoke-runtime.log").read_text(encoding="utf-8",errors="replace")
           print(log)
           assert result.returncode==0, result.returncode
