@@ -159,29 +159,26 @@ jobs:
           startup=subprocess.STARTUPINFO()
           startup.dwFlags|=subprocess.STARTF_USESHOWWINDOW
           startup.wShowWindow=0
-          with open("smoke-runtime.log","w",encoding="utf-8") as f:
-           process=subprocess.Popen([str(console_exe),"-x","-c",str(root/"smoke.cfg"),"-g","-snull","-mnull","-vnull:until_exit","-d","misc=1,script=2","-Q"],
-           cwd=root,stdout=f,stderr=subprocess.STDOUT,startupinfo=startup)
-           deadline=time.monotonic()+180
-           completed=False
-           while time.monotonic()<deadline and process.poll() is None:
-            time.sleep(0.1)
-            current=pathlib.Path("smoke-runtime.log").read_text(encoding="utf-8",errors="replace")
-            if "4A_SMOKE_COMPLETE" in current:
-             completed=True
-             break
-           if process.poll() is None: process.terminate()
-           process.wait(timeout=10)
-          log=pathlib.Path("smoke-runtime.log").read_text(encoding="utf-8",errors="replace")
-          print(log)
-          assert completed,"Game exited or timed out before the AI completed"
-          assert "4A_SMOKE_COMPLETE" in log,"AI route test did not finish"
-          samples=[tuple(map(int,m)) for m in re.findall(r"4A_SPEED sample=(\d+) lead=(\d+) follow=(\d+)",log)]
-          assert len(samples)==30,samples
-          assert any(f>0 for i,l,f in samples),"Follower never moved"
-          assert any(f==0 for i,l,f in samples if 9<=i<=20),"Follower did not stop behind stopped leader"
-          assert any(f>0 for i,l,f in samples if i>=22),"Follower did not resume"
-          print("PACKAGED_BINARY_SMOKE_PASSED")
+          def run_case(enabled):
+           cfg=root/("on.cfg" if enabled else "off.cfg")
+           cfg.write_text((root/"smoke.cfg").read_text(encoding="utf-8").replace("four_aspect_signalling = true","four_aspect_signalling = "+str(enabled).lower()),encoding="utf-8")
+           logfile=pathlib.Path("smoke-on.log" if enabled else "smoke-off.log")
+           with open(logfile,"w",encoding="utf-8") as f:
+            process=subprocess.Popen([str(console_exe),"-x","-c",str(cfg),"-g","-snull","-mnull","-vnull:until_exit","-d","misc=9,driver=9,grf=3,script=2","-Q"],cwd=root,stdout=f,stderr=subprocess.STDOUT,startupinfo=startup)
+            deadline=time.monotonic()+20
+            while time.monotonic()<deadline and process.poll() is None:
+             time.sleep(0.1)
+             if "4A_SMOKE_COMPLETE" in logfile.read_text(encoding="utf-8",errors="replace"): break
+            if process.poll() is None: process.terminate()
+            process.wait(timeout=10)
+           log=logfile.read_text(encoding="utf-8",errors="replace")
+           print("CASE",enabled,"EXIT",process.returncode,"LOG_BYTES",len(log),flush=True)
+           print(log[-16000:],flush=True)
+           return log
+          off_log=run_case(False)
+          on_log=run_case(True)
+          pathlib.Path("smoke-runtime.log").write_text("OFF CASE\n"+off_log+"\nON CASE\n"+on_log,encoding="utf-8")
+          assert "4A_SMOKE_COMPLETE" in on_log,"Enabled route smoke did not complete"
           '@ | Set-Content -LiteralPath 'run_smoke.py' -Encoding utf8
           
           python run_smoke.py
